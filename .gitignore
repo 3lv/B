@@ -1,0 +1,21 @@
+Cargo.lock
+
+# Build directories for rust
+server/target
+frontend/target
+
+# Yew compiled to wasm distribution
+dist/
+
+storage/public/*
+!storage/public/README.md
+
+storage/uploads/*
+!storage/uploads/README.md
+
+# Backup files
+*.bak
+*.bak.*
+
+# Vim sessions
+.s

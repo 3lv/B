@@ -1,0 +1,9 @@
+[build]
+target = "index.html"
+dist = "../dist"
+
+[serve]
+port = 64003
+
+[[proxy]]
+backend = "http://[::1]:64003/api"

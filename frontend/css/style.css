@@ -1,0 +1,149 @@
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+body {
+	display: box;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+	/*
+	overflow: hidden;
+	*/
+	background-color: #f0f8ff;
+	margin: auto auto;
+	font-family: Arial, sans-serif;
+}
+
+.image-dir {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.image-dir img {
+	max-height: 300px;
+}
+
+.flower-frame {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#flower_chbg {
+	position: relative;
+	top: -50px;
+	width: 300px;
+	height: 300px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
+	animation: pulse 5s infinite;
+}
+
+#flower_chbg .center {
+	width: 100px;
+	height: 100px;
+	background: radial-gradient(circle, #ffdd99, #ff9f43);
+	border-radius: 50%;
+	z-index: 1;
+	transition: all 0.5s ease-in-out;
+	opacity: 0;
+	pointer-events: none;
+}
+#flower_chbg.opened .center {
+	transform: rotate(0deg) translateY(50%);
+	opacity: 1;
+	pointer-events: auto;
+}
+
+#flower_chbg .petal {
+	position: absolute;
+	width: 100px;
+	height: 100px;
+	/*
+	background: linear-gradient(111.9deg, rgb(221, 49, 49) 0.3%, rgb(0, 8, 119) 100.7%);
+	background: linear-gradient(to top, #c471f5 0%, #fa71cd 100%);
+	background: linear-gradient(109.6deg, rgb(162, 2, 63) 11.2%, rgb(231, 62, 68) 53.6%, rgb(255, 129, 79) 91.1%);
+	*/
+	background: linear-gradient( to bottom, #355C7D,#6C5B7B,#C06C84);
+	border-radius: 24% 76% 50% 50% / 21% 57% 43% 79% ;
+	transform-origin: bottom center;
+	/*
+	border: 3px solid;
+	border-image-slice: 1;
+	border-image-source: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+	*/
+	transition: all 0.5s ease-in-out;
+	opacity: 0;
+	pointer-events: none;
+}
+#flower_chbg.opened .petal {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+#flower_chbg.opened .petal1 { transform: rotate(0deg) translateY(-50%); }
+#flower_chbg.opened .petal2 { transform: rotate(60deg) translateY(-50%); }
+#flower_chbg.opened .petal3 { transform: rotate(120deg) translateY(-50%); }
+#flower_chbg.opened .petal4 { transform: rotate(180deg) translateY(-50%); }
+#flower_chbg.opened .petal5 { transform: rotate(240deg) translateY(-50%); }
+#flower_chbg.opened .petal6 { transform: rotate(300deg) translateY(-50%); }
+
+.form-container {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	display: block;
+	opacity: 0;
+	background-color: white;
+	border: 1px solid #ccc;
+	padding: 20px;
+	border-radius: 10px;
+	box-shadow: 0 0 10px rgba(0,0,0,0.1);
+	transition: all 0.5s ease-in-out;
+	pointer-events: none;
+}
+
+.form-container.opened {
+	opacity: 1;
+	display: block;
+	pointer-events: auto;
+}
+
+form {
+	display: flex;
+	flex-direction: column;
+}
+
+label, input {
+	margin-bottom: 10px;
+}
+
+/*
+input[type="text"], input[type="file"] {
+	padding: 8px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+}
+*/
+
+input[type="submit"] {
+	padding: 10px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+input[type="submit"]:hover {
+	background-color: #45a049;
+}
