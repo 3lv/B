@@ -1,7 +1,10 @@
 use axum::{
-    extract::{self, Path, Query, Multipart},
-    response::{Response, IntoResponse, Redirect, Json},
-    http::StatusCode,
+    body::{Body, Bytes},
+    extract::{self, Request, Path, Query, Multipart},
+    response::{
+        Response, IntoResponse, Redirect, Json,
+    },
+    http::{StatusCode, header},
 };
 
 use serde::{Serialize, Deserialize};
@@ -9,13 +12,19 @@ use serde::{Serialize, Deserialize};
 use chrono::prelude::*;
 
 use std::{
+    fs,
     path::PathBuf,
     process::Command,
 };
 
-use crate::database::{self, CreateUser};
+use tokio_util::io::ReaderStream;
 
-use crate::file::{FileExtension, FormFile};
+use crate::database::{self, CreateUser, Username};
+
+use crate::file::{FileExtension, FileRename, FormFile};
+
+// TryFromField
+use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
 
 // TODO: Look into AsRef<str>
 trait IntoErrResponse {
@@ -24,7 +33,7 @@ trait IntoErrResponse {
 // TODO: Also use 400 (BAD REQUEST) etc
 impl<T> IntoErrResponse for T
 where
-    T: IntoResponse,
+T: IntoResponse,
 {
     fn into_err_response(self) -> Response {
         (StatusCode::INTERNAL_SERVER_ERROR, self).into_response()
@@ -47,26 +56,33 @@ pub async fn create_user(extract::Json(payload): extract::Json<CreateUser>) -> R
         Ok(()) => (StatusCode::OK, "user created").into_response()
     }
     /*
-    use diesel::result::Error;
-    use diesel::result::DatabaseErrorKind as DbError;
-    match user::create_user(payload) {
-        Err(Error::DatabaseError(db_error, _)) =>
-            match db_error {
-                DbError::UniqueViolation => "Username is already in use".into_err_response(),
-                DbError::NotNullViolation => "Username and passwords must not be null".into_err_response(),
-                DbError::CheckViolation => "Username must not be empty and password>=8".into_err_response(),
-                _ => "Unkown database error".into_err_response()
-            },
-        Err(_) => "Unknown error".into_err_response(),
-        Ok(()) => (StatusCode::OK, "User created").into_response()
-    }
-    */
+       use diesel::result::Error;
+       use diesel::result::DatabaseErrorKind as DbError;
+       match user::create_user(payload) {
+       Err(Error::DatabaseError(db_error, _)) =>
+       match db_error {
+       DbError::UniqueViolation => "Username is already in use".into_err_response(),
+       DbError::NotNullViolation => "Username and passwords must not be null".into_err_response(),
+       DbError::CheckViolation => "Username must not be empty and password>=8".into_err_response(),
+       _ => "Unkown database error".into_err_response()
+       },
+       Err(_) => "Unknown error".into_err_response(),
+       Ok(()) => (StatusCode::OK, "User created").into_response()
+       }
+       */
     //user::create_user(payload).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Could not save user").into_response())?;
     //Ok((StatusCode::OK, "User created").into_response())
 }
 
 pub async fn get_users() -> Result<impl IntoResponse, Response> {
     Ok(Json(database::get_users().map_err(|e| format!("{e}").into_err_response())?))
+}
+
+pub async fn is_username_available(username: Username) -> impl IntoResponse {
+    match !database::user_exists(username) {
+        true => "0",
+        false => "1",
+    }
 }
 
 
@@ -82,8 +98,8 @@ pub async fn json_response() -> impl IntoResponse {
         name: "Cazan".to_owned(),
         age: 19,
         secrets: Some(vec![
-            "Mi am luat bully toata viata!".to_owned(),
-            "Nu mai vreau sa ma cheme cazan".to_owned()
+                      "Mi am luat bully toata viata!".to_owned(),
+                      "Nu mai vreau sa ma cheme cazan".to_owned()
         ]),
     };
     Json(person)
@@ -92,37 +108,37 @@ pub async fn json_response() -> impl IntoResponse {
 pub async fn save_image(mut multipart: Multipart) -> Result<impl IntoResponse, Response> {
     if let Some(field) = multipart
         .next_field()
-        .await
-        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-    {
-        if let Some("image") = field.name() {
-            let file: FormFile = FormFile::async_from(field).await
-                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Couldn't receive file").into_response())?;
-            let file_name = Utc::now().to_string() + "." + &file.name.extension().unwrap_or("none");
-            let save_path: PathBuf = ["../storage/public/images", &file_name].iter().collect();
-            std::fs::write(&save_path, file.bytes)
-                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Could not save file").into_response())?;
-        }
-    }
+            .await
+            .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            {
+                if let Some("image") = field.name() {
+                    let file: FormFile = FormFile::async_from_field(field).await
+                        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Couldn't receive file").into_response())?;
+                    let dir = PathBuf::from("../storage/public/images");
+                    file.save_as_date(&dir).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Could not save file").into_response())?;
+                }
+            }
     Ok((StatusCode::OK, "image saved").into_response())
 }
 
-pub async fn set_background_handler(mut multipart: Multipart) -> Result<impl IntoResponse, Response> {
-    if let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-    {
-        if let Some("image") = field.name() {
-            let file: FormFile = FormFile::async_from(field).await
-                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Couldn't receive file").into_response())?;
-            let file_name = Utc::now().to_string() + "." + &file.name.extension().unwrap_or("none");
-            let save_path: PathBuf = ["../storage/uploads", &file_name].iter().collect();
-            std::fs::write(&save_path, file.bytes).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Could not save file").into_response())?;
-            set_background(&save_path, BgOpt::Stretch).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Could not set image as background").into_response())?;
-        }
+#[derive(TryFromMultipart)]
+pub struct BackgroundForm {
+    #[form_data(limit = "10MB")]
+    image: FieldData<Bytes>,
+    password: String,
+}
+
+
+pub async fn set_background_handler(data: TypedMultipart<BackgroundForm>) -> Result<impl IntoResponse, Response> {
+    if data.password != "6969" {
+        return Err("Incorrect password".into_response());
     }
-    //Ok((StatusCode::OK, "Background changed!").into_response())
+    let file: FormFile = FormFile::from_with_copy(&data.image);
+    let file_name = format!("{}.{}", Utc::now(), file.name.extension().unwrap_or("none"));
+    let save_path: PathBuf = ["../storage/uploads", &file_name].iter().collect();
+    file.save_as(&save_path);
+    set_background(&save_path, BgOpt::Stretch)
+        .map_err(|_| "Could not set image as background..".into_err_response())?;
     Ok(Redirect::to("/"))
 }
 
@@ -141,6 +157,11 @@ fn set_background(image_path: &PathBuf, option: BgOpt) -> Result<(), std::io::Er
         .arg(arg)
         .arg(image_path)
         .status()?;
+    Command::new("bash").arg("-c")
+        .arg("rm ../storage/uploads/CURRENT_BACKGROUND*")
+        .status()?;
+    let dummy = image_path.rename_without_ext("CURRENT_BACKGROUND");
+    let _ = fs::copy(image_path, dummy);
     Ok(())
 }
 
@@ -152,13 +173,59 @@ pub async fn reload_image_dir() -> &'static str {
 
 #[derive(Deserialize)]
 pub struct PathParams {
-    username: String,
+    username: database::Username,
 }
 
 pub async fn user_profile(
     Path(PathParams { username }): Path<PathParams>
 ) -> String {
-    username + " profile was never created. (wip)"
+    if database::user_exists(username.clone()) {
+        format!("User {username} didn't add anything to their profile.")
+    } else {
+        format!("User {username} doesn't exist.")
+    }
+}
+
+pub async fn get_current_background(req: Request<Body>) -> Response {
+    let headers = req.headers();
+    if !headers.contains_key("Token") {
+        return (StatusCode::BAD_REQUEST, "").into_response();
+    }
+    if headers["Token"] != "*secret_token*" {
+        return (StatusCode::UNAUTHORIZED, "").into_response();
+    }
+    let mut current_background = None;
+    match fs::read_dir("../storage/uploads") {
+        Err(_err) => panic!("can't read dir"),
+        Ok(paths) => for path in paths {
+            let path = path.unwrap().path();
+            if path.to_str().unwrap().contains("CURRENT_BACKGROUND") {
+                current_background = Some(path);
+            }
+        }
+    }
+    if current_background.is_none() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "").into_response();
+    }
+    let current_background = current_background.unwrap();
+    let file = match tokio::fs::File::open(current_background.clone()).await {
+        Ok(file) => file,
+        Err(_err) => return (StatusCode::INTERNAL_SERVER_ERROR, "").into_response(),
+    };
+    let content_type = match mime_guess::from_path(&current_background).first_raw() {
+        Some(mime) => mime,
+        None => return (StatusCode::BAD_REQUEST, "MIME Type couldn't be determined".to_string()).into_response()
+    };
+    let stream = ReaderStream::new(file);
+    let body = Body::from_stream(stream);
+    let headers = [
+        (header::CONTENT_TYPE, content_type),
+        (
+            header::CONTENT_DISPOSITION,
+            &format!(r#"attachment; filename={:?}"#, current_background),
+        )
+    ];
+    (headers, body).into_response()
 }
 
 // TODO: Look into #[serde(default = "fn_name")]

@@ -1,4 +1,5 @@
 use yew::prelude::*;
+use crate::components::molecules::image_card::ImageCard;
 
 use web_sys::console;
 
@@ -71,19 +72,17 @@ pub fn ImageDir(ImageDirProps{ip, api}: &ImageDirProps) -> Html {
     match &state.images {
         Ok(images) => {
                 images.iter().map(|image| html! {
-                    <a href={image.clone()}>
-                        <img src={image.clone()} alt="Image did not load" />
-                    </a>
-                }).collect::<Vec<_>>()
+                    <ImageCard src={image.clone()} />
+                }).collect::<Html>()
         }
         Err(err) => {
             use ImageDirError as Err;
             match err {
                 Err::Loading() | Err::NeedsFetch() => {
-                    vec![html! { "Images are loading..." }]
+                    html! { "Images are loading..." }
                 }
                 Err::CantLoad(string) => {
-                    vec![html! { string.clone() }]
+                    html! { string.clone() }
                 }
             }
         }

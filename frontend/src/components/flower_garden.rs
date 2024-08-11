@@ -8,9 +8,10 @@ pub struct Props {
 
 #[function_component]
 pub fn FlowerGarden(Props{children}: &Props) -> Html {
+    let style="display: flex; flex-direction: column; justify-content: space-around; align-items: center;";
     html! {
         //<div class="FlowerGarden" style="display: grid; grid-gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-        <div class="FlowerGarden" style="display: flex; justify-content: center; align-items: center;">
+        <div class="FlowerGarden" {style} >
             {children.clone()}
         </div>
     }

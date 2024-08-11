@@ -6,6 +6,13 @@ use axum::{
     Router,
     http::StatusCode,
 };
+/*
+#[macro_use]
+extern crate diesel;
+*/
+#[macro_use]
+extern crate diesel_derives;
+
 
 use tower::util::ServiceExt;
 
@@ -25,19 +32,21 @@ async fn main() {
         Router::new()
             .route("/secret", get(secret))
             .route("/secret_json", get(json_response))
-            .route("/user/:username/profile", get(user_profile))
-            .route("/set_background",
-                   post(set_background_handler)
-                   .layer(DefaultBodyLimit::max(10 * 1000 * 1000))
-                   )
+            .route("/get_image_dir", get(image_dir::get_image_dir))
+            .route("/reload_image_dir", get(reload_image_dir))
             .route("/save_image",
                    post(save_image)
                    .layer(DefaultBodyLimit::max(10 * 1000 * 1000))
                    )
-            .route("/get_image_dir", get(image_dir::get_image_dir))
-            .route("/reload_image_dir", get(reload_image_dir))
+            .route("/set_background",
+                   post(set_background_handler)
+                   .layer(DefaultBodyLimit::max(10 * 1000 * 1000))
+                   )
+            .route("/user/:username/profile", get(user_profile))
             .route("/create_user", post(create_user))
             .route("/get_users", get(get_users))
+            
+            .route("/current_background", post(get_current_background))
     };
     let app = Router::new()
         .nest("/api", api)

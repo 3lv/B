@@ -2,7 +2,7 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 mod components;
-use components::{Flower, FlowerGarden, ImageDir};
+use components::{Flower, FlowerGarden, ImageDir, Form};
 
 pub fn server_ip() -> AttrValue {
     AttrValue::from(my_server_ip())
@@ -28,8 +28,8 @@ fn switch(routes: Route) -> Html {
         Route::Home => html! { <Root /> },
         Route::Flower => html! {
             <FlowerGarden>
-                <Flower api="/api/set_background" />
-                <Flower api="/api/save_image" />
+                <Flower form_title="Set background" api="/api/set_background" />
+                <Flower form_title="Upload image" api="/api/save_image" />
             </FlowerGarden>
         },
         Route::NotFound => html! { "404" },

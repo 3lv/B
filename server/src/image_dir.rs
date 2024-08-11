@@ -5,10 +5,12 @@ use axum::response::{Json, IntoResponse};
 use crate::file::FileExtension;
 
 fn get_images() -> impl Iterator<Item = String> {
-    let paths = fs::read_dir("../storage/public/images").unwrap();
-    paths.map(|x| x.unwrap())
-        .filter(|x| x.metadata().unwrap().is_file())
-        .map(|x| x.path())
+    let mut paths = fs::read_dir("../storage/public/images").unwrap()
+        .filter_map(Result::ok)
+        .filter(|dir| dir.metadata().unwrap().is_file())
+        .collect::<Vec<_>>();
+    paths.sort_by_key(|dir| dir.metadata().unwrap().modified().unwrap());
+    paths.into_iter().map(|dir| dir.path())
         .filter(FileExtension::is_image)
         .map(|path| path.into_os_string().into_string().unwrap()
              .chars().skip(10).collect::<String>())

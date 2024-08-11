@@ -6,6 +6,8 @@ use crate::components::ImageForm;
 pub struct FlowerProps {
     #[prop_or_default]
     pub children: Html,
+    #[prop_or_default]
+    pub form_title: AttrValue,
     pub api: AttrValue,
 }
 struct FlowerState {
@@ -40,7 +42,7 @@ pub fn Flower(props: &FlowerProps) -> Html {
                 <div class="petal petal6"></div>
                 //{ children.clone() }
             </div>
-            <ImageForm action={props.api.clone()} is_open={!state.is_open} />
+            <ImageForm title={&props.form_title} action={props.api.clone()} is_open={!state.is_open} />
         </div>
     }
 }
